@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>如烟 · 本地控制台</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: #11141b; color: #e7eaf0; }
+    body { max-width: 920px; margin: 0 auto; padding: 32px 20px; }
+    h1 { margin: 0; font-size: 24px; }
+    p { color: #9ba5b5; line-height: 1.55; }
+    .bar, .card { border: 1px solid #2b3341; background: #191e28; border-radius: 12px; padding: 16px; }
+    .bar { display: flex; gap: 10px; margin: 20px 0; }
+    input { flex: 1; min-width: 0; border: 1px solid #394252; border-radius: 8px; background: #10141c; color: inherit; padding: 10px 12px; }
+    button { border: 0; border-radius: 8px; padding: 10px 16px; background: #6c91ff; color: #071126; font-weight: 650; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .label { color: #9ba5b5; font-size: 13px; }
+    .value { margin-top: 7px; font-size: 18px; overflow-wrap: anywhere; }
+    h2 { margin: 26px 0 10px; font-size: 17px; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; margin: 0; color: #c8d2e2; font: 13px/1.65 Consolas, monospace; }
+    #message { min-height: 22px; margin: 10px 2px; color: #ffcb78; }
+    .quiet { font-size: 13px; }
+    @media (max-width: 560px) { body { padding: 20px 12px; } .bar { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <h1>如烟 · 本地控制台</h1>
+  <p>查看桥接运行状态和最近的运行日志。令牌只保存在此页面内存中，刷新页面后需要重新输入。</p>
+  <form class="bar" id="auth-form">
+    <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴 state/console-token 中的令牌" aria-label="控制台令牌" required>
+    <button id="refresh" type="submit">连接 / 刷新</button>
+  </form>
+  <div id="message" role="status"></div>
+  <section class="grid" aria-label="运行状态">
+    <div class="card"><div class="label">状态</div><div class="value" id="status">未连接</div></div>
+    <div class="card"><div class="label">运行时间</div><div class="value" id="uptime">—</div></div>
+    <div class="card"><div class="label">模型</div><div class="value" id="model">—</div></div>
+    <div class="card"><div class="label">私聊 / 群聊白名单</div><div class="value" id="allowlists">—</div></div>
+    <div class="card"><div class="label">群聊每日回复上限</div><div class="value" id="group-limit">—</div></div>
+    <div class="card"><div class="label">按需联网搜索</div><div class="value" id="web-search">—</div></div>
+  </section>
+  <h2>最近运行日志</h2>
+  <div class="card"><pre id="logs">连接后显示最近 100 条运行日志。</pre></div>
+  <p class="quiet">控制台仅绑定 127.0.0.1；日志不包含聊天正文或 API Key。</p>
+  <script>
+    const form = document.querySelector('#auth-form');
+    const tokenInput = document.querySelector('#token');
+    const message = document.querySelector('#message');
+    const refreshButton = document.querySelector('#refresh');
+    let sessionToken = '';
+
+    function show(id, text) { document.getElementById(id).textContent = text; }
+    function duration(seconds) {
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${days ? `${days} 天 ` : ''}${hours} 小时 ${minutes} 分钟`;
+    }
+
+    async function getJson(path) {
+      const response = await fetch(path, { headers: { Authorization: `Bearer ${sessionToken}` }, cache: 'no-store' });
+      if (response.status === 401) throw new Error('令牌不正确，请检查 state/console-token 文件。');
+      if (!response.ok) throw new Error(`控制台请求失败（HTTP ${response.status}）。`);
+      return response.json();
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      sessionToken = tokenInput.value.trim();
+      if (!sessionToken) return;
+      refreshButton.disabled = true;
+      message.textContent = '';
+      try {
+        const [status, logs] = await Promise.all([
+          getJson('/api/console/status'),
+          getJson('/api/console/logs'),
+        ]);
+        show('status', status.status === 'running' ? '运行中' : '已停止');
+        show('uptime', duration(status.uptimeSeconds));
+        show('model', status.model);
+        show('allowlists', `${status.privateAllowlistConfigured ? '私聊已配置' : '私聊未配置'} · ${status.groupAllowlistConfigured ? '群聊已配置' : '群聊未配置'}`);
+        show('group-limit', `${status.groupReplyDailyLimit} 轮`);
+        show('web-search', status.webSearchEnabled ? '已启用' : '未启用');
+        document.querySelector('#logs').textContent = logs.logs.map((line) => `[${line.at}] ${line.message}`).join('\n') || '暂无日志。';
+      } catch (error) {
+        sessionToken = '';
+        message.textContent = error.message;
+      } finally {
+        refreshButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

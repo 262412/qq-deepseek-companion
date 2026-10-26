@@ -1,0 +1,30 @@
+{
+  "model": "deepseek-flash",
+  "openAiVoiceId": "",
+  "napcat": {
+    "apiUrl": "http://127.0.0.1:3000",
+    "accessToken": ""
+  },
+  "listener": {
+    "host": "127.0.0.1",
+    "port": 8787,
+    "path": "/onebot/event",
+    "eventToken": ""
+  },
+  "allowedUserIds": [],
+  "allowedGroupIds": [],
+  "historyLimit": 16,
+  "webSearch": {
+    "enabled": false
+  },
+  "memory": {
+    "extractEveryUserTurns": 5,
+    "maxItemsPerType": 12
+  },
+  "humanizer": {
+    "minDelayMs": 500,
+    "msPerChar": 32,
+    "maxDelayMs": 3500,
+    "jitter": 0.2
+  }
+}

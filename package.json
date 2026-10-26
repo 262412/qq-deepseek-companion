@@ -1,0 +1,16 @@
+{
+  "name": "qq-deepseek-companion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.21.0"
+  },
+  "scripts": {
+    "init": "node src/server.mjs --init",
+    "start": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/start.ps1"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

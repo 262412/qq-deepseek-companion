@@ -1,0 +1,10 @@
+config.local.json
+voice.local.txt
+state/
+node_modules/
+work/
+*.dpapi
+persona/role.md
+temp-*.ps1
+temp-*.bat
+outputs/napcat/
